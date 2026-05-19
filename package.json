@@ -16,6 +16,6 @@
   "author": "",
   "license": "MIT",
   "dependencies": {
-    "@notionhq/client": "^2.3.1"
+    "@notionhq/client": "latest"
   }
 }
