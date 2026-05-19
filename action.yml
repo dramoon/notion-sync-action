@@ -7,7 +7,7 @@ branding:
 runs:
   using: 'composite'
   steps:
-    # 1. Forzamos al servidor de GitHub a instalar y usar Node.js 24
+    # 1. Forzamos al servidor de GitHub a usar Node.js 24
     - name: Set up Node.js 24
       uses: actions/setup-node@v4
       with:
@@ -18,7 +18,13 @@ runs:
       run: npm install --prefix ${{ github.action_path }}
       shell: bash
 
-    # 3. Ejecutamos el script apuntando a su ruta correcta
+    # 3. Ejecutamos el script inyectando las variables de entorno necesarias
     - name: Run script
       run: node ${{ github.action_path }}/sync-notion.js
       shell: bash
+      env:
+        NOTION_TOKEN: ${{ env.NOTION_TOKEN }}
+        NOTION_COMMITS_DB_ID: ${{ env.NOTION_COMMITS_DB_ID }}
+        NOTION_TAREAS_DB_ID: ${{ env.NOTION_TAREAS_DB_ID }}
+        COMMIT_MESSAGE: ${{ env.COMMIT_MESSAGE }}
+        COMMIT_URL: ${{ env.COMMIT_URL }}
