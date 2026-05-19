@@ -108,7 +108,7 @@ async function run() {
     await notion.pages.create({
       parent: { database_id: COMMITS_DB_ID },
       properties: {
-        'Name': { title: [{ text: { content: commitMessage } }] },
+        'Name': { title: [{ text: { content: `[${shortHash}]` } }] }, // <-- Ahora guardará "[a1b2c3d]"
         'Enlace del Commit': { url: commitUrl },
         'Fecha': { date: { start: new Date().toISOString().split('T')[0] } },
         'Tarea Asociada': { relation: [{ id: targetPageId }] }
