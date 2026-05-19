@@ -1,6 +1,6 @@
+// Cambiamos la forma de importar para asegurar que se lee la clase Client correctamente
 const { Client } = require('@notionhq/client');
 
-// Inicializamos el cliente oficial de Notion
 const notion = new Client({ auth: process.env.NOTION_TOKEN });
 const COMMITS_DB_ID = process.env.NOTION_COMMITS_DB_ID;
 const TAREAS_DB_ID = process.env.NOTION_TAREAS_DB_ID;
@@ -11,7 +11,6 @@ async function run() {
 
   console.log(`Procesando commit: "${commitMessage}"`);
 
-  // Capturamos el patrón TASK-XX
   const match = commitMessage.match(/([A-Z]+-\d+)/i);
 
   if (!match) {
@@ -23,11 +22,11 @@ async function run() {
   console.log(`ID de tarea detectado: ${taskId}. Buscando en la base de datos de Notion...`);
 
   try {
-    // Hacemos la consulta usando la sintaxis exacta del SDK oficial: databases.query
+    // Ejecución directa sobre el cliente limpio
     const queryResponse = await notion.databases.query({
       database_id: TAREAS_DB_ID,
       filter: {
-        property: 'ID', // <-- Tu columna de ID en Notion debe llamarse exactamente 'ID'
+        property: 'ID',
         id: {
           equals: taskId
         }
@@ -43,7 +42,6 @@ async function run() {
     const targetPageId = queryResponse.results[0].id;
     console.log(`¡Tarea encontrada con éxito! (Page ID: ${targetPageId}). Registrando commit...`);
 
-    // Creamos la nueva fila en tu tabla de Mapeo de Commits
     await notion.pages.create({
       parent: { database_id: COMMITS_DB_ID },
       properties: {
