@@ -4,27 +4,37 @@ branding:
   icon: 'arrow-up-right'
   color: 'black'
 
+# Definimos los datos de entrada oficiales que requiere la acción
+inputs:
+  notion_token:
+    description: 'Token de la API de Notion'
+    required: true
+  notion_commits_db_id:
+    description: 'ID de la base de datos de Commits'
+    required: true
+  notion_tareas_db_id:
+    description: 'ID de la base de datos de Tareas'
+    required: true
+
 runs:
   using: 'composite'
   steps:
-    # 1. Forzamos al servidor de GitHub a usar Node.js 24
     - name: Set up Node.js 24
       uses: actions/setup-node@v4
       with:
         node-version: '24'
 
-    # 2. Instalamos las dependencias necesarias
     - name: Install dependencies
       run: npm install --prefix ${{ github.action_path }}
       shell: bash
 
-    # 3. Ejecutamos el script inyectando las variables de entorno necesarias
+    # Mapeamos los inputs directamente hacia el proceso de Node
     - name: Run script
       run: node ${{ github.action_path }}/sync-notion.js
       shell: bash
       env:
-        NOTION_TOKEN: ${{ env.NOTION_TOKEN }}
-        NOTION_COMMITS_DB_ID: ${{ env.NOTION_COMMITS_DB_ID }}
-        NOTION_TAREAS_DB_ID: ${{ env.NOTION_TAREAS_DB_ID }}
-        COMMIT_MESSAGE: ${{ env.COMMIT_MESSAGE }}
-        COMMIT_URL: ${{ env.COMMIT_URL }}
+        NOTION_TOKEN: ${{ inputs.notion_token }}
+        NOTION_COMMITS_DB_ID: ${{ inputs.notion_commits_db_id }}
+        NOTION_TAREAS_DB_ID: ${{ inputs.notion_tareas_db_id }}
+        COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+        COMMIT_URL: ${{ github.event.head_commit.url }}
