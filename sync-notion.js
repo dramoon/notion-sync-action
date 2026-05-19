@@ -1,13 +1,13 @@
 const { Client } = require('@notionhq/client');
-const core = require('@actions/core'); 
 
 async function run() {
-  // Capturamos los datos desde los inputs de GitHub
-  const token = core.getInput('notion_token') || process.env.NOTION_TOKEN || "";
-  const commitsDb = core.getInput('notion_commits_db_id') || process.env.NOTION_COMMITS_DB_ID || "";
-  const tareasDb = core.getInput('notion_tareas_db_id') || process.env.NOTION_TAREAS_DB_ID || "";
+  // GitHub inyecta los inputs de la acción automáticamente como variables de entorno
+  // con el prefijo 'INPUT_' seguido del nombre en MAYÚSCULAS.
+  const token = process.env.INPUT_NOTION_TOKEN || process.env.NOTION_TOKEN || "";
+  const commitsDb = process.env.INPUT_NOTION_COMMITS_DB_ID || process.env.NOTION_COMMITS_DB_ID || "";
+  const tareasDb = process.env.INPUT_NOTION_TAREAS_DB_ID || process.env.NOTION_TAREAS_DB_ID || "";
 
-  // Capturamos los datos del commit directamente de las variables de entorno nativas de GitHub
+  // Capturamos el mensaje del commit directamente de las variables globales de GitHub
   const commitMessage = process.env.COMMIT_MESSAGE || "";
   const commitUrl = process.env.COMMIT_URL || "";
 
@@ -17,13 +17,13 @@ async function run() {
   const COMMITS_DB_ID = commitsDb.replace(/-/g, "").trim();
   const TAREAS_DB_ID = tareasDb.replace(/-/g, "").trim();
 
-  // --- BLOQUE DE DIAGNÓSTICO INTEGRADO ---
-  console.log("--- AUDITORÍA DIRECTA DE INPUTS ---");
+  // --- BLOQUE DE DIAGNÓSTICO ---
+  console.log("--- AUDITORÍA DIRECTA DE ENTORNO ---");
   console.log(`¿Token recibido?: ${token ? "SÍ" : "NO"}`);
-  console.log(`¿Formato moderno de Notion (ntn_)?: ${token.startsWith('ntn_') ? "SÍ" : "NO"}`);
+  console.log(`¿Formato moderno (ntn_)?: ${token.startsWith('ntn_') ? "SÍ" : "NO"}`);
   console.log(`Longitud limpia Commits DB: ${COMMITS_DB_ID.length}`);
   console.log(`Longitud limpia Tareas DB: ${TAREAS_DB_ID.length}`);
-  console.log("-----------------------------------");
+  console.log("------------------------------------");
 
   const match = commitMessage.match(/([A-Z]+-\d+)/i);
   if (!match) {
@@ -34,7 +34,6 @@ async function run() {
   const taskId = match[1].toUpperCase();
   console.log(`ID de tarea detectado: ${taskId}. Buscando en la base de datos de Notion...`);
 
-  // Validación de longitud de los IDs (deben tener 32 caracteres)
   if (!TAREAS_DB_ID || TAREAS_DB_ID.length !== 32) {
     console.error(`Error crítico: El ID de la base de datos de tareas no es válido (Longitud: ${TAREAS_DB_ID.length})`);
     process.exit(1);
@@ -46,7 +45,7 @@ async function run() {
     const queryResponse = await notion.databases.query({
       database_id: TAREAS_DB_ID,
       filter: {
-        property: 'ID', // <-- Asegúrate de que tu columna en Notion se llama exactamente 'ID'
+        property: 'ID', // <-- Tu columna en Notion con el código (TASK-15) debe llamarse exactamente 'ID'
         id: { equals: taskId }
       },
       page_size: 1
@@ -60,7 +59,7 @@ async function run() {
     const targetPageId = queryResponse.results[0].id;
     console.log(`¡Tarea encontrada con éxito! (Page ID: ${targetPageId}). Registrando commit...`);
 
-    // Creamos el registro en la tabla de commits
+    // Creamos la nueva página en la tabla de Mapeo de Commits
     await notion.pages.create({
       parent: { database_id: COMMITS_DB_ID },
       properties: {
