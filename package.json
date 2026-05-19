@@ -1,0 +1,21 @@
+{
+  "name": "notion-sync-action",
+  "version": "1.0.0",
+  "description": "Acción centralizada de GitHub para vincular commits con tareas de Notion",
+  "main": "sync-notion.js",
+  "scripts": {
+    "start": "node sync-notion.js"
+  },
+  "keywords": [
+    "github",
+    "action",
+    "notion",
+    "sync",
+    "api"
+  ],
+  "author": "",
+  "license": "MIT",
+  "dependencies": {
+    "@notionhq/client": "^2.3.1"
+  }
+}

@@ -1,0 +1,9 @@
+name: 'Notion Sync Action'
+description: 'Sincroniza y enlaza commits de GitHub en una base de datos de Notion'
+branding:
+  icon: 'arrow-up-right'
+  color: 'black'
+
+runs:
+  using: 'node20'
+  main: 'sync-notion.js'
