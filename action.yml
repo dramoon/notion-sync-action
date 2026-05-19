@@ -18,16 +18,18 @@ inputs:
 runs:
   using: 'composite'
   steps:
+    # Forzamos explícitamente a que el contenedor de setup-node use la v24 en el entorno de ejecución
     - name: Set up Node.js 24
       uses: actions/setup-node@v4
       with:
         node-version: '24'
+        cache: 'npm' # Opcional: añade caché nativa para que vaya aún más rápido
+        cache-dependency-path: '${{ github.action_path }}/package.json'
 
     - name: Install dependencies
       run: npm install --prefix ${{ github.action_path }}
       shell: bash
 
-    # Forzamos el mapeo de inputs hacia las variables que el script lee con process.env
     - name: Run script
       run: node ${{ github.action_path }}/sync-notion.js
       shell: bash
