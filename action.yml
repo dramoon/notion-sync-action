@@ -4,7 +4,6 @@ branding:
   icon: 'arrow-up-right'
   color: 'black'
 
-# Definimos los datos de entrada oficiales que requiere la acción
 inputs:
   notion_token:
     description: 'Token de la API de Notion'
@@ -28,7 +27,7 @@ runs:
       run: npm install --prefix ${{ github.action_path }}
       shell: bash
 
-    # Mapeamos los inputs directamente hacia el proceso de Node
+    # Forzamos el mapeo de inputs hacia las variables que el script lee con process.env
     - name: Run script
       run: node ${{ github.action_path }}/sync-notion.js
       shell: bash
