@@ -5,14 +5,20 @@ branding:
   color: 'black'
 
 runs:
-  using: 'composite' # Cambiamos a tipo composite para encadenar comandos
+  using: 'composite'
   steps:
-    # 1. Instalamos las dependencias necesarias dentro de la carpeta de la acción
+    # 1. Forzamos al servidor de GitHub a instalar y usar Node.js 24
+    - name: Set up Node.js 24
+      uses: actions/setup-node@v4
+      with:
+        node-version: '24'
+
+    # 2. Instalamos las dependencias necesarias
     - name: Install dependencies
       run: npm install --prefix ${{ github.action_path }}
       shell: bash
 
-    # 2. Ejecutamos el script apuntando a su ruta correcta
+    # 3. Ejecutamos el script apuntando a su ruta correcta
     - name: Run script
       run: node ${{ github.action_path }}/sync-notion.js
       shell: bash
