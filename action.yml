@@ -39,3 +39,4 @@ runs:
         NOTION_TAREAS_DB_ID: ${{ inputs.notion_tareas_db_id }}
         COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
         COMMIT_URL: ${{ github.event.head_commit.url }}
+        COMMIT_HASH: ${{ github.sha }}
