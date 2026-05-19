@@ -1,9 +1,10 @@
-// Cambiamos la forma de importar para asegurar que se lee la clase Client correctamente
 const { Client } = require('@notionhq/client');
 
 const notion = new Client({ auth: process.env.NOTION_TOKEN });
-const COMMITS_DB_ID = process.env.NOTION_COMMITS_DB_ID;
-const TAREAS_DB_ID = process.env.NOTION_TAREAS_DB_ID;
+
+// Limpiamos los IDs eliminando guiones y espacios por si se colaron al copiarlos
+const COMMITS_DB_ID = (process.env.NOTION_COMMITS_DB_ID || "").replace(/-/g, "").trim();
+const TAREAS_DB_ID = (process.env.NOTION_TAREAS_DB_ID || "").replace(/-/g, "").trim();
 
 async function run() {
   const commitMessage = process.env.COMMIT_MESSAGE || "";
@@ -21,12 +22,17 @@ async function run() {
   const taskId = match[1].toUpperCase();
   console.log(`ID de tarea detectado: ${taskId}. Buscando en la base de datos de Notion...`);
 
+  // Validación de seguridad para confirmar que el ID se procesa limpio
+  if (!TAREAS_DB_ID || TAREAS_DB_ID.length !== 32) {
+    console.error(`Error: El ID de la base de datos de tareas no tiene 32 caracteres válidos. Recibido: "${TAREAS_DB_ID}"`);
+    process.exit(1);
+  }
+
   try {
-    // Ejecución directa sobre el cliente limpio
     const queryResponse = await notion.databases.query({
       database_id: TAREAS_DB_ID,
       filter: {
-        property: 'ID',
+        property: 'ID', // <-- Asegúrate de que la columna con el código numérico en Notion se llame exactamente 'ID'
         id: {
           equals: taskId
         }
