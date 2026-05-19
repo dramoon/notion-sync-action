@@ -1,8 +1,9 @@
 const { Client } = require('@notionhq/client');
 
+// Inicializamos el cliente oficial de Notion
 const notion = new Client({ auth: process.env.NOTION_TOKEN });
 const COMMITS_DB_ID = process.env.NOTION_COMMITS_DB_ID;
-const TAREAS_DB_ID = process.env.NOTION_TAREAS_DB_ID; // Nueva DB de tareas
+const TAREAS_DB_ID = process.env.NOTION_TAREAS_DB_ID;
 
 async function run() {
   const commitMessage = process.env.COMMIT_MESSAGE || "";
@@ -10,6 +11,7 @@ async function run() {
 
   console.log(`Procesando commit: "${commitMessage}"`);
 
+  // Capturamos el patrón TASK-XX
   const match = commitMessage.match(/([A-Z]+-\d+)/i);
 
   if (!match) {
@@ -18,15 +20,14 @@ async function run() {
   }
 
   const taskId = match[1].toUpperCase();
-  console.log(`ID de tarea detectado: ${taskId}. Buscando en base de datos de Notion...`);
+  console.log(`ID de tarea detectado: ${taskId}. Buscando en la base de datos de Notion...`);
 
   try {
-    // CAMBIO CLAVE: Consultamos directamente la base de datos de tareas filtrando por la propiedad ID
-    // Notion obliga a que los filtros de propiedades de tipo ID se busquen por su cadena de texto exacta
+    // Hacemos la consulta usando la sintaxis exacta del SDK oficial: databases.query
     const queryResponse = await notion.databases.query({
       database_id: TAREAS_DB_ID,
       filter: {
-        property: 'ID', // <-- Asegúrate de que tu columna de ID numérico en Notion se llama exactamente 'ID'
+        property: 'ID', // <-- Tu columna de ID en Notion debe llamarse exactamente 'ID'
         id: {
           equals: taskId
         }
@@ -35,14 +36,14 @@ async function run() {
     });
 
     if (queryResponse.results.length === 0) {
-      console.log(`No se encontró ninguna tarea en la base de datos con el ID exacto: ${taskId}`);
+      console.log(`No se encontró ninguna tarea en Notion con el ID exacto: ${taskId}`);
       return;
     }
 
     const targetPageId = queryResponse.results[0].id;
-    console.log(`¡Tarea encontrada! (Page ID: ${targetPageId}). Registrando commit...`);
+    console.log(`¡Tarea encontrada con éxito! (Page ID: ${targetPageId}). Registrando commit...`);
 
-    // Creamos el commit en la base de datos de mapeo
+    // Creamos la nueva fila en tu tabla de Mapeo de Commits
     await notion.pages.create({
       parent: { database_id: COMMITS_DB_ID },
       properties: {
