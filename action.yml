@@ -23,11 +23,11 @@ runs:
       uses: actions/setup-node@v4
       with:
         node-version: '24'
-        cache: 'npm' # Opcional: añade caché nativa para que vaya aún más rápido
-        cache-dependency-path: '${{ github.action_path }}/package.json'
 
     - name: Install dependencies
-      run: npm install --prefix ${{ github.action_path }}
+      run: |
+        npm cache clean --force
+        npm install --prefix ${{ github.action_path }}
       shell: bash
 
     - name: Run script
