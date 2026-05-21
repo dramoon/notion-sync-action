@@ -32,33 +32,33 @@ async function run() {
     const notion = new Client({ auth: token });
     let queryResponse = null;
     
-    // ESTRATEGIA 1: ID Único de Notion
+    // ESTRATEGIA 1: Texto Exacto (Evita colisiones validando el prefijo completo: EF-11 vs TASK-11)
     try {
-      const numberId = parseInt(taskId.split('-')[1], 10);
       queryResponse = await notion.databases.query({
         database_id: TAREAS_DB_ID,
-        filter: { property: 'ID', unique_id: { equals: numberId } },
+        filter: { property: 'ID', rich_text: { equals: taskId } },
         page_size: 1
       });
     } catch (e) {}
 
-    // ESTRATEGIA 2: Texto Normal
-    if (!queryResponse || queryResponse.results.length === 0) {
-      try {
-        queryResponse = await notion.databases.query({
-          database_id: TAREAS_DB_ID,
-          filter: { property: 'ID', rich_text: { equals: taskId } },
-          page_size: 1
-        });
-      } catch (e) {}
-    }
-
-    // ESTRATEGIA 3: Título Principal
+    // ESTRATEGIA 2: Título Principal (Como alternativa si se guarda de forma diferente)
     if (!queryResponse || queryResponse.results.length === 0) {
       try {
         queryResponse = await notion.databases.query({
           database_id: TAREAS_DB_ID,
           filter: { property: 'ID', title: { equals: taskId } },
+          page_size: 1
+        });
+      } catch (e) {}
+    }
+
+    // ESTRATEGIA 3: ID Único numérico puro (Último recurso si las anteriores fallan)
+    if (!queryResponse || queryResponse.results.length === 0) {
+      try {
+        const numberId = parseInt(taskId.split('-')[1], 10);
+        queryResponse = await notion.databases.query({
+          database_id: TAREAS_DB_ID,
+          filter: { property: 'ID', unique_id: { equals: numberId } },
           page_size: 1
         });
       } catch (e) {}
