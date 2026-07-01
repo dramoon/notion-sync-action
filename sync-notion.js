@@ -36,7 +36,7 @@ async function run() {
           {
             property: 'Estado',
             status: {
-              equals: 'En progreso'
+              equals: 'En proceso'
             }
           },
           {
