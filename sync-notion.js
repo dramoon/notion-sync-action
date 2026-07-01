@@ -20,34 +20,69 @@ async function run() {
     return;
   }
 
-  const taskId = match[1].toUpperCase();
-  const numberId = parseInt(taskId.split('-')[1], 10);
-  console.log(`🔍 ID detectado: ${taskId} (Número: ${numberId}). Buscando en la propiedad 'ID'...`);
+  const taskId = match[1].toUpperCase(); 
+  const numberId = parseInt(taskId.split('-')[1], 10); 
+  console.log(`🔍 Buscando de forma optimizada la tarea: ${taskId} (Número: ${numberId})...`);
 
   try {
     const notion = new Client({ auth: token });
     
+    // Filtro ligero: Traemos solo tareas activas ("En progreso" o "Sin empezar")
+    // Evitamos por completo usar el filtro por la propiedad numérica 'ID' que hace crashear a Notion
     const queryResponse = await notion.databases.query({
       database_id: TAREAS_DB_ID,
-      filter: { 
-        property: 'ID', 
-        unique_id: { 
-          equals: numberId 
-        } 
+      filter: {
+        or: [
+          {
+            property: 'Estado',
+            status: {
+              equals: 'En progreso'
+            }
+          },
+          {
+            property: 'Estado',
+            status: {
+              equals: 'Sin empezar'
+            }
+          }
+        ]
       },
-      page_size: 1
+      page_size: 100 
     });
 
-    if (!queryResponse || queryResponse.results.length === 0) {
-      console.log(`⚠️ Alerta: Notion no encontró ninguna tarea con el número ${numberId} en la propiedad 'ID'.`);
+    let results = queryResponse.results;
+    
+    // Buscador matemático en memoria local de Node.js
+    const encontrarTarea = (lista) => lista.find(page => {
+      const idProp = page.properties['ID'];
+      return idProp && idProp.type === 'unique_id' && idProp.unique_id.number === numberId;
+    });
+
+    let targetPage = encontrarTarea(results);
+
+    // Salvavidas de emergencia: si la tarea no está en esos estados (ej. ya se marcó como completada antes),
+    // escaneamos rápidamente las últimas 30 tareas modificadas recientemente sin importar su estado.
+    if (!targetPage) {
+      console.log("No encontrada entre las tareas activas. Escaneando el histórico reciente por si acaso...");
+      const backupResponse = await notion.databases.query({
+        database_id: TAREAS_DB_ID,
+        sorts: [{ timestamp: 'last_edited_time', direction: 'descending' }],
+        page_size: 30
+      });
+      targetPage = encontrarTarea(backupResponse.results);
+    }
+
+    if (!targetPage) {
+      console.log(`⚠️ Alerta: No se encontró la tarea con el número ${numberId} en la propiedad 'ID' tras el escaneo optimizado.`);
       return;
     }
 
-    const targetPageId = queryResponse.results[0].id;
-    console.log(`✅ Tarea localizada con éxito (Page ID: ${targetPageId}). Registrando commit...`);
+    const targetPageId = targetPage.id;
+    console.log(`✅ Tarea localizada en memoria (Page ID: ${targetPageId}). Registrando commit...`);
     
     const shortHash = commitHash ? commitHash.substring(0, 7) : "Commit";
 
+    // Grabación limpia en la tabla de Commits
     await notion.pages.create({
       parent: { database_id: COMMITS_DB_ID },
       properties: {
@@ -58,10 +93,10 @@ async function run() {
       }
     });
 
-    console.log(`✅ ¡Éxito total! Commit [${shortHash}] registrado.`);
+    console.log(`✅ ¡Éxito total! Commit [${shortHash}] registrado correctamente.`);
 
   } catch (error) {
-    console.error("❌ Error en la comunicación con la API de Notion:", error.message);
+    console.error("❌ Error crítico en la ejecución:", error.message);
     process.exit(1);
   }
 }
