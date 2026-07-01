@@ -20,42 +20,31 @@ async function run() {
     return;
   }
 
-  const taskId = match[1].toUpperCase(); // Ej: TASK-103
-  const numberId = parseInt(taskId.split('-')[1], 10); // Ej: 103
-  console.log(`🔍 ID detectado: ${taskId} (Número: ${numberId}). Buscando por escaneo de índice...`);
+  const taskId = match[1].toUpperCase();
+  const numberId = parseInt(taskId.split('-')[1], 10);
+  console.log(`🔍 ID detectado: ${taskId} (Número: ${numberId}). Buscando en la propiedad 'ID'...`);
 
   try {
     const notion = new Client({ auth: token });
     
-    // Traemos las tareas recientes ordenadas por última edición (máximo 100)
-    // Esto evita usar el filtro por propiedad 'ID' en el servidor de Notion
     const queryResponse = await notion.databases.query({
       database_id: TAREAS_DB_ID,
-      sorts: [
-        {
-          timestamp: 'last_edited_time',
-          direction: 'descending'
-        }
-      ],
-      page_size: 100 
+      filter: { 
+        property: 'ID', 
+        unique_id: { 
+          equals: numberId 
+        } 
+      },
+      page_size: 1
     });
 
-    // Buscamos la tarea en memoria inspeccionando los objetos devueltos
-    const targetPage = queryResponse.results.find(page => {
-      const idProperty = page.properties['ID'];
-      if (idProperty && idProperty.type === 'unique_id') {
-        return idProperty.unique_id.number === numberId;
-      }
-      return false;
-    });
-
-    if (!targetPage) {
-      console.log(`⚠️ Alerta: No se encontró la tarea con ID numérico ${numberId} entre las 100 tareas más recientes.`);
+    if (!queryResponse || queryResponse.results.length === 0) {
+      console.log(`⚠️ Alerta: Notion no encontró ninguna tarea con el número ${numberId} en la propiedad 'ID'.`);
       return;
     }
 
-    const targetPageId = targetPage.id;
-    console.log(`✅ Tarea localizada en memoria (Page ID: ${targetPageId}). Registrando commit...`);
+    const targetPageId = queryResponse.results[0].id;
+    console.log(`✅ Tarea localizada con éxito (Page ID: ${targetPageId}). Registrando commit...`);
     
     const shortHash = commitHash ? commitHash.substring(0, 7) : "Commit";
 
@@ -69,10 +58,10 @@ async function run() {
       }
     });
 
-    console.log(`✅ ¡Éxito total! Commit [${shortHash}] registrado con la nueva estrategia.`);
+    console.log(`✅ ¡Éxito total! Commit [${shortHash}] registrado.`);
 
   } catch (error) {
-    console.error("❌ Error grave en la ejecución general:", error);
+    console.error("❌ Error en la comunicación con la API de Notion:", error.message);
     process.exit(1);
   }
 }
