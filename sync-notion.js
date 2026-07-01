@@ -5,11 +5,11 @@ async function run() {
   const commitsDb = process.env.NOTION_COMMITS_DB_ID || process.env.INPUT_NOTION_COMMITS_DB_ID || "";
   const tareasDb = process.env.NOTION_TAREAS_DB_ID || process.env.INPUT_NOTION_TAREAS_DB_ID || "";
 
-  // Sanitizamos el mensaje eliminando tildes y eñes conflictivas para evitar descuadres de bytes en HTTP
+  // Conservamos la sanitización que ha salvado el flujo
   let rawCommitMessage = process.env.COMMIT_MESSAGE || "";
   const commitMessage = rawCommitMessage
     .normalize("NFD")
-    .replace(/[\u0300-\u036f]/g, "") // Quita tildes
+    .replace(/[\u0300-\u036f]/g, "")
     .replace(/ñ/g, "n")
     .replace(/Ñ/g, "N");
 
@@ -55,11 +55,11 @@ async function run() {
     
     const shortHash = commitHash ? commitHash.substring(0, 7) : "Commit";
 
-    // Grabación limpia en la tabla de Commits (usando también el mensaje limpio)
+    // Grabación en la tabla de Commits introduciendo ÚNICAMENTE el código del commit
     await notion.pages.create({
       parent: { database_id: COMMITS_DB_ID },
       properties: {
-        'Name': { title: [{ text: { content: `[${shortHash}] ${commitMessage.substring(0, 40)}...` } }] },
+        'Name': { title: [{ text: { content: `[${shortHash}]` } }] }, // <-- Ajustado aquí
         'Enlace del Commit': { url: commitUrl },
         'Fecha': { date: { start: new Date().toISOString().split('T')[0] } },
         'Tarea Asociada': { relation: [{ id: targetPageId }] }
