@@ -1,5 +1,8 @@
 const { Client } = require('@notionhq/client');
 
+// Función auxiliar para pausar la ejecución (milisegundos)
+const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+
 async function run() {
   const token = process.env.NOTION_TOKEN || process.env.INPUT_NOTION_TOKEN || "";
   const commitsDb = process.env.NOTION_COMMITS_DB_ID || process.env.INPUT_NOTION_COMMITS_DB_ID || "";
@@ -14,7 +17,6 @@ async function run() {
   const COMMITS_DB_ID = commitsDb.replace(/-/g, "").trim();
   const TAREAS_DB_ID = tareasDb.replace(/-/g, "").trim();
 
-  // Mantenemos tu patrón estricto (ej: TASK-102)
   const match = commitMessage.match(/([A-Z]+-\d+)/i);
   if (!match) {
     console.log("⚠️ Omitiendo: No se detectó ningún ID de tarea con formato Prefijo-Número en el mensaje del commit.");
@@ -33,28 +35,40 @@ async function run() {
     const notion = new Client({ auth: token });
     let queryResponse = null;
     
-    // Extraemos solo la parte numérica (ej: de "TASK-102" saca 102)
     const numberId = parseInt(taskId.split('-')[1], 10);
     console.log(`Filtrando numéricamente por propiedad 'ID' igual a: ${numberId}`);
 
-    // CONSULTA DIRECTA: Usando el filtro numérico estricto que exige la nueva API de Notion
-    try {
-      queryResponse = await notion.databases.query({
-        database_id: TAREAS_DB_ID,
-        filter: { 
-          property: 'ID', 
-          unique_id: { 
-            equals: numberId 
-          } 
-        },
-        page_size: 1
-      });
-    } catch (apiError) {
-      console.error("❌ Error de validación al consultar la propiedad 'ID':", apiError.message);
+    // Bucle de reintentos (Máximo 3 intentos ante fallos de conexión / Premature Close)
+    const maxRetries = 3;
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        queryResponse = await notion.databases.query({
+          database_id: TAREAS_DB_ID,
+          filter: { 
+            property: 'ID', 
+            unique_id: { 
+              equals: numberId 
+            } 
+          },
+          page_size: 1
+        });
+        
+        // Si la petición tuvo éxito y devolvió datos, rompemos el bucle de reintentos
+        if (queryResponse) break;
+
+      } catch (apiError) {
+        console.warn(`⚠️ Intento ${attempt} fallido debido a un problema de red: ${apiError.message}`);
+        if (attempt === maxRetries) {
+          console.error("❌ Se alcanzaron todos los reintentos permitidos sin éxito.");
+        } else {
+          console.log("Reintentando en 2 segundos...");
+          await delay(2000);
+        }
+      }
     }
 
     if (!queryResponse || queryResponse.results.length === 0) {
-      console.log(`⚠️ Alerta: Notion no encontró ninguna tarea con el número ${numberId} en la propiedad 'ID'. Revisa si el NOTION_TAREAS_DB_ID de GitHub apunta a la tabla correcta.`);
+      console.log(`⚠️ Alerta: Notion no encontró ninguna tarea con el número ${numberId} en la propiedad 'ID'.`);
       return;
     }
 
@@ -77,7 +91,7 @@ async function run() {
     console.log(`✅ ¡Éxito total! Commit [${shortHash}] registrado.`);
 
   } catch (error) {
-    console.error("❌ Error grave en la comunicación con la API de Notion:", error);
+    console.error("❌ Error grave en la ejecución general del script:", error);
     process.exit(1);
   }
 }
